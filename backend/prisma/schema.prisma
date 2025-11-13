@@ -1,0 +1,34 @@
+// Dentro do arquivo prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Produto {
+  id            String   @id @default(uuid())
+  nome          String   @unique
+  unidadeMedida String
+  quantidade      Float?   
+  fornecedor      String?  
+  dataRecebimento String?
+
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  email     String   @unique // O e-mail deve ser único
+  nome      String
+  senha     String   // Aqui guardaremos a senha hasheada
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
