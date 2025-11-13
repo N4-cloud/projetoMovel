@@ -1,5 +1,3 @@
-// app/cadastrarProduto.tsx (COMPLETO E CORRIGIDO)
-
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -19,7 +17,7 @@ import { API_URL } from '../constants/api'; // Importa a URL
 // Mantém a tela de splash visível
 SplashScreen.preventAutoHideAsync();
 
-export default function CadastrarProdutoScreen() { // Renomeei o componente
+export default function CadastrarProdutoScreen() {
   // Estados
   const [nomeProduto, setNomeProduto] = useState('');
   const [quantidadeRecebida, setQuantidadeRecebida] = useState('');
@@ -54,6 +52,23 @@ export default function CadastrarProdutoScreen() { // Renomeei o componente
       return;
     }
 
+    // --- CORREÇÃO DO TIMEOUT ---
+    // Em vez de AbortSignal.timeout(15000), que não é suportado no React Native:
+
+    // 1. Define o tempo máximo de espera
+    const tempoLimiteMs = 15000;
+
+    // 2. Cria um AbortController
+    const controller = new AbortController();
+    
+    // 3. Cria um ID de timeout que, ao disparar, chama o .abort() do controller
+    const timeoutId = setTimeout(() => {
+        console.log('Timeout! Abortando a requisição...');
+        controller.abort(); // Isso vai disparar um erro 'AbortError'
+    }, tempoLimiteMs);
+    // --- FIM DA CORREÇÃO ---
+
+
     try {
       const resposta = await fetch(`${API_URL}/produtos`, {
         method: 'POST',
@@ -63,12 +78,17 @@ export default function CadastrarProdutoScreen() { // Renomeei o componente
         body: JSON.stringify({
           nome: nomeProduto,
           unidadeMedida: unidadeMedida,
-          quantidadeRecebida: quantidadeRecebida, 
-          fornecedor: fornecedor,                 
-          dataRecebimento: dataRecebimento        
+          quantidadeRecebida: quantidadeRecebida,
+          fornecedor: fornecedor,
+          dataRecebimento: dataRecebimento
         }),
-        signal: AbortSignal.timeout(15000)
+        // 4. Usa o 'signal' do controller que criamos
+        signal: controller.signal 
       });
+
+      // 5. Se a requisição foi bem-sucedida, limpe o timeout!
+      //    Isso impede que o .abort() seja chamado sem necessidade.
+      clearTimeout(timeoutId);
 
       const dadosDaResposta = await resposta.json();
 
@@ -83,20 +103,26 @@ export default function CadastrarProdutoScreen() { // Renomeei o componente
         setFornecedor('');
       }
 
-    } catch (error: any) { 
-      console.error('Erro de rede ou timeout:', error);
-       if (error.name === 'AbortError') {
+    } catch (error: any) {
+      // 6. Limpa o timeout também em caso de erro (seja timeout ou outro erro)
+      clearTimeout(timeoutId);
+      
+      console.error('Erro de rede ou timeout:', error.message);
+      
+      // O 'name' do erro será 'AbortError' se o timeout disparou
+      if (error.name === 'AbortError') {
         Alert.alert('Erro de Conexão', 'O servidor demorou muito para responder (timeout). Verifique sua conexão e o servidor.');
       } else {
-        Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
+        // Trata outros erros de rede (ex: sem internet, servidor offline)
+        Alert.alert('Erro de Conexão', `Não foi possível conectar ao servidor: ${error.message}`);
       }
     }
-  }; 
+  };
 
   return (
-    <ScrollView 
-      style={styles.container} 
-      contentContainerStyle={styles.scrollContainer} 
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContainer}
       onLayout={onLayoutRootView}
     >
       <View style={styles.header}>
@@ -162,7 +188,7 @@ export default function CadastrarProdutoScreen() { // Renomeei o componente
           placeholderTextColor="#A9A9A9"
           value={dataRecebimento}
           onChangeText={setDataRecebimento}
-          editable={false} 
+          editable={false}
         />
       </View>
 

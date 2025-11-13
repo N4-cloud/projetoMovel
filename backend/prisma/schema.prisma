@@ -32,3 +32,14 @@ model Usuario {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Producao {
+  id              String   @id @default(uuid())
+  nomeProduto     String   // Qual produto foi produzido
+  quantidade      Float    // Quanto foi produzido
+  dataProducao    String   // Quando foi produzido
+  observacao      String?  // Alguma nota extra (opcional)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
