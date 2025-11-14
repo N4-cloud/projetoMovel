@@ -1,4 +1,4 @@
-// src/server.ts (VERSÃO FINAL SEM VERIFICAÇÃO DE E-MAIL)
+// src/server.ts (VERSÃO FINAL COM RECUPERAÇÃO DE SENHA)
 
 import dotenv from 'dotenv';
 import path from 'path'; 
@@ -6,6 +6,10 @@ import bcrypt from 'bcryptjs';
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
+
+// --- NOVO IMPORT: Controller de Recuperação de Senha ---
+import { esqueciSenha, redefinirSenha } from './controllers/AuthController';
+// -------------------------------------------------------
 
 // 1. Carrega o .env manualmente
 dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
@@ -183,8 +187,13 @@ app.delete('/producao/:id', async (req, res) => {
 });
 
 // -----------------------------------------------------
-// ROTAS DE AUTENTICAÇÃO (Login e Registro)
+// ROTAS DE AUTENTICAÇÃO (Login, Registro e Recuperação)
 // -----------------------------------------------------
+
+// --- NOVAS ROTAS DE "ESQUECI A SENHA" ---
+app.post('/auth/esqueci-senha', esqueciSenha);
+app.post('/auth/redefinir-senha', redefinirSenha);
+// -----------------------------------------
 
 app.post('/auth/registrar', async (req, res) => {
   try {
@@ -194,7 +203,7 @@ app.post('/auth/registrar', async (req, res) => {
     }
     const senhaHash = await bcrypt.hash(senha, 10);
     const novoUsuario = await prisma.usuario.create({
-      data: { nome, email, senha: senhaHash }, // Campo emailVerificado removido daqui
+      data: { nome, email, senha: senhaHash }, 
     });
     return res.status(201).json({ id: novoUsuario.id, email: novoUsuario.email });
   } catch (error) {
@@ -213,7 +222,6 @@ app.post('/auth/login', async (req, res) => {
     const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
     if (!senhaCorreta) return res.status(400).json({ error: 'Senha incorreta.' });
 
-    // Campo emailVerificado removido daqui
     return res.status(200).json({
       id: usuario.id, nome: usuario.nome, email: usuario.email,
       message: 'Login bem-sucedido!',

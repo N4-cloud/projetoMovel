@@ -9,37 +9,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model Produto {
-  id            String   @id @default(uuid())
-  nome          String   @unique
-  unidadeMedida String
-  quantidade      Float?   
-  fornecedor      String?  
-  dataRecebimento String?
-
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model Usuario {
-  id        String   @id @default(uuid())
-  email     String   @unique // O e-mail deve ser único
-  nome      String
-  senha     String   // Aqui guardaremos a senha hasheada
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Producao {
   id              String   @id @default(uuid())
-  nomeProduto     String   // Qual produto foi produzido
-  quantidade      Float    // Quanto foi produzido
-  dataProducao    String   // Quando foi produzido
-  observacao      String?  // Alguma nota extra (opcional)
+  nome            String   @unique
+  unidadeMedida   String
+  quantidade      Float?
+  fornecedor      String?
+  dataRecebimento String?
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Usuario {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  nome              String
+  senha             String
+  
+  // --- NOVOS CAMPOS PARA RECUPERAÇÃO DE SENHA ---
+  resetToken        String?   // O código enviado por e-mail
+  resetTokenExpires DateTime? // Até quando esse código é válido
+  // ----------------------------------------------
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Producao {
+  id           String   @id @default(uuid())
+  nomeProduto  String
+  quantidade   Float
+  dataProducao String
+  observacao   String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

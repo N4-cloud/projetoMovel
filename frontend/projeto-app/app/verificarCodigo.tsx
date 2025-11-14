@@ -1,6 +1,6 @@
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useState } from 'react';
 import {
@@ -14,20 +14,23 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
-import axios from 'axios'; 
-
-import { API_URL } from '../constants/api';
+import axios from 'axios';
+import { API_URL } from '../constants/api'; // Importando a API_URL
 
 SplashScreen.preventAutoHideAsync();
 
-export default function ForgotPasswordScreen() {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false); 
+export default function VerifyCodeScreen() {
+  const [token, setToken] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  
+  // Recebe o e-mail que foi passado como parâmetro da tela anterior
+  const { email } = useLocalSearchParams() as { email: string };
 
   const [fontsLoaded] = useFonts({
     'SweetToffee': require('../assets/fonts/SweetToffee.ttf'),
-    'BalsamiqSans-Regular': require('../assets/fonts/BalsamiqSans-Regular.ttf'), // <<<--- CORRIGIDO AQUI
+    'BalsamiqSans-Regular': require('../assets/fonts/BalsamiqSans-Regular.ttf'), // Caminho correto
   });
 
   const onLayoutRootView = useCallback(async () => {
@@ -40,48 +43,44 @@ export default function ForgotPasswordScreen() {
     return null;
   }
 
-  const handlePasswordReset = async () => {
-    if (!email.trim() || isLoading) {
+  const handleVerifyCode = async () => {
+    if (!token.trim() || !novaSenha.trim()) {
+      Alert.alert('Atenção', 'Por favor, insira o código e a nova senha.');
       return;
+    }
+    
+    if (token.length !== 6) {
+       Alert.alert('Atenção', 'O código deve ter 6 dígitos.');
+       return;
     }
 
     setIsLoading(true);
 
     try {
-      await axios.post(`${API_URL}/auth/esqueci-senha`, {
-        email: email.trim(),
+      // 1. Chama a rota do back-end para redefinir a senha
+      await axios.post(`${API_URL}/auth/redefinir-senha`, {
+        email: email,
+        token: token,
+        novaSenha: novaSenha,
       });
 
+      // 2. Se deu certo, avisa e manda para o login
       Alert.alert(
-        'Verifique seu E-mail',
-        'Se este e-mail estiver cadastrado, um código de 6 dígitos foi enviado para ele.'
+        'Sucesso!',
+        'Sua senha foi redefinida. Por favor, faça login novamente.',
+        [{ text: 'OK', onPress: () => router.replace('/') }] // Volta para a tela de login
       );
-      
-      router.push({
-        pathname: '/verificarCodigo',
-        params: { email: email.trim() } 
-      });
 
     } catch (error: any) {
+      // 3. Se deu erro (token inválido, expirado, etc)
       if (axios.isAxiosError(error) && error.response) {
-        if (error.response.status === 404) {
-           Alert.alert(
-            'Verifique seu E-mail',
-            'Se este e-mail estiver cadastrado, um código de 6 dígitos foi enviado para ele.'
-          );
-           router.push({
-             pathname: '/verificarCodigo', 
-             params: { email: email.trim() }
-           });
-        } else {
-          Alert.alert('Erro', 'Não foi possível se conectar ao servidor.');
-        }
+        Alert.alert('Erro', error.response.data.error || 'Não foi possível redefinir a senha.');
       } else {
-         Alert.alert('Erro', 'Ocorreu um erro de rede. Tente novamente.');
+        Alert.alert('Erro', 'Ocorreu um erro de rede. Tente novamente.');
       }
-      console.error(error); 
+      console.error(error);
     } finally {
-      setIsLoading(false); 
+      setIsLoading(false);
     }
   };
 
@@ -95,30 +94,46 @@ export default function ForgotPasswordScreen() {
           <FontAwesome5 name="arrow-left" size={24} color="#BF360C" />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Redefinir Senha</Text>
+        <Text style={styles.title}>Verificar Código</Text>
         <Text style={styles.subtitle}>
-          Insira seu e-mail para receber um código de 6 dígitos.
+          Digite o código de 6 dígitos enviado para: {email}
         </Text>
 
+        {/* Campo Código */}
         <View style={styles.inputGroup}>
-          <FontAwesome5 name="envelope" size={20} color="#BF360C" style={styles.inputIcon} />
+          <FontAwesome5 name="key" size={20} color="#BF360C" style={styles.inputIcon} />
           <TextInput
             style={styles.input}
-            placeholder="seu-email@exemplo.com"
+            placeholder="123456"
             placeholderTextColor="#A9A9A9"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
+            value={token}
+            onChangeText={setToken}
+            keyboardType="number-pad"
+            maxLength={6}
+            editable={!isLoading}
+          />
+        </View>
+        
+        {/* Campo Nova Senha */}
+        <View style={styles.inputGroup}>
+          <FontAwesome5 name="lock" size={20} color="#BF360C" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Digite sua nova senha"
+            placeholderTextColor="#A9A9A9"
+            value={novaSenha}
+            onChangeText={setNovaSenha}
+            secureTextEntry
             editable={!isLoading}
           />
         </View>
 
-        <TouchableOpacity style={styles.actionButton} onPress={handlePasswordReset} disabled={isLoading}>
+        {/* Botão Redefinir */}
+        <TouchableOpacity style={styles.actionButton} onPress={handleVerifyCode} disabled={isLoading}>
           {isLoading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.actionButtonText}>ENVIAR CÓDIGO</Text>
+            <Text style={styles.actionButtonText}>REDEFINIR SENHA</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -126,7 +141,7 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-// Estilos
+// Estilos adaptados da tela anterior
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -196,7 +211,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.6,
     shadowRadius: 5,
-    minHeight: 50, 
+    minHeight: 50,
   },
   actionButtonText: {
     fontFamily: 'SweetToffee',
